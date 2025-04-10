@@ -13,31 +13,26 @@ class TernaryGraph(QWidget):
         self.setLayout(self.layout)
 
         # Créer une figure matplotlib standard
-        self.figure = Figure()
+        self.figure = Figure(layout="constrained")
         self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.canvas)
-
-        # Ajouter un subplot standard
-        self.ax = self.figure.add_subplot(111)
-
-        # Créer un axe ternaire sur ce subplot
-        self.tax = ternary.TernaryAxesSubplot(ax=self.ax, scale=100)
 
         # Initialisation des données
         self.points = []  # Liste des points ajoutés (ternary coordinates)
         self.scores = []  # Liste des scores associés
         self.parameters = None  # Stockage des paramètres min/max
+        self.R2_score = None  # Stockage du score R2
 
         # Configuration initiale du graphe
         self.initialize_graph()
 
     def initialize_graph(self):
         """Initialise le graphe ternaire."""
-        self.ax.clear()          # Nettoie le subplot matplotlib
-        self.ax.clear()         # Nettoie l'axe ternaire (très important !)
-        for cbar in self.figure.axes:
-            if cbar != self.ax:
-                self.figure.delaxes(cbar)
+        # Supprimer les axes matplotlib
+        for ax in self.figure.axes:
+            self.figure.delaxes(ax)
+        self.ax = self.figure.add_subplot(111)
+        self.tax = ternary.TernaryAxesSubplot(ax=self.ax, scale=100)
 
         # Configuration du triangle
         self.tax.boundary(linewidth=2.0)
@@ -53,6 +48,9 @@ class TernaryGraph(QWidget):
 
         # Supprimer les ticks de matplotlib
         self.tax.clear_matplotlib_ticks()
+
+        if self.R2_score is not None:
+            self.tax.set_title(f"R²: {self.R2_score:.2f}", fontsize=fontsize)
 
         # Redessiner
         self.canvas.draw()
@@ -87,6 +85,7 @@ class TernaryGraph(QWidget):
 
         # Créer l'interpolateur
         interpolator = interpolator_cls(points, scores)
+        self.R2_score = interpolator.R2_score()
 
         # Définir la fonction de heatmap
         def heatmap_function(p):

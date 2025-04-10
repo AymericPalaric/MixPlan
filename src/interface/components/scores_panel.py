@@ -7,9 +7,11 @@ from src.algo.interpolator import *
 
 # Dictionnaire des interpolateurs disponibles
 INTERPOLATORS = {
-    "Linear": LinearInterpolator,
-    "Delaunay": DelaunayInterpolator,
+    # "LinearND": LinearNDInterpolator,
+    # "Delaunay": DelaunayInterpolator,
     "RBF": RBFInterpolator,
+    "Quadratic": QuadraticInterpolator,
+    "Linear": LinearInterpolator,
 }
 
 class ScoresPanel(QWidget):

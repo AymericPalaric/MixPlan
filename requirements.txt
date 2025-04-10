@@ -3,3 +3,4 @@ numpy>=1.24.1
 scipy>=1.10.0
 PyQt5==5.15.11
 pyqtgraph>=0.13.7
+scikit-learn==1.4.0
