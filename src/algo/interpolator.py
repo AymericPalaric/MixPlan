@@ -14,6 +14,7 @@ __all__ = [
 
 
 class Interpolator:
+    min_num_points = None
     def __init__(self, points: np.ndarray, scores: np.ndarray):
         self.points = points
         self.scores = scores
@@ -36,6 +37,7 @@ class Interpolator:
 
 
 class RBFInterpolator(Interpolator):
+    min_num_points = 3
     def __init__(self, points: np.ndarray, scores, lazy_init=False, **kwargs):
         super().__init__(points, scores)
         # init the partial interpolator (all kwargs but no point nor score)
@@ -53,8 +55,8 @@ class RBFInterpolator(Interpolator):
         total = np.sum(t_points, axis=1, keepdims=True)
         # Avoid division by zero if total is 0
         total[total == 0] = 1e-10
-        x = 0.5 * (2 * t_points[:, 1] + t_points[:, 2]) / total
-        y = (np.sqrt(3) / 2) * t_points[:, 2] / total
+        x = 0.5 * (2 * t_points[:, 1][..., None]+ t_points[:, 2][..., None]) / total
+        y = (np.sqrt(3) / 2) * t_points[:, 2][..., None] / total
         return np.column_stack((x, y))
 
 
@@ -69,12 +71,13 @@ class RBFInterpolator(Interpolator):
         if self.lazy_init:
             self.recompute()
         # Convert ternary coordinates to cartesian
-        cartesian_points = self.ternary_to_cartesian(p)
+        cartesian_point = self.ternary_to_cartesian(p[None])
         # Compute the interpolated value
-        return float(self.interpolator(cartesian_points))
+        return float(self.interpolator(cartesian_point))
     
 
 class LinearInterpolator(Interpolator):
+    min_num_points = 3
     def __init__(self, points: np.ndarray, scores: np.ndarray):
         super().__init__(points, scores)
         self.recompute()
@@ -89,6 +92,7 @@ class LinearInterpolator(Interpolator):
 
 
 class DelaunayInterpolator(Interpolator):
+    min_num_points = 3
     def __init__(self, points: np.ndarray, scores: np.ndarray):
         super().__init__(points, scores)
         self.recompute()
