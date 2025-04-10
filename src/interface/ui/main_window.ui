@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <widget class="QGroupBox" name="parametersGroup">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QLabel" name="parametersLabel">
+        <property name="text">
+         <string>Paramètres du mélange</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="minQuantityLineEdit">
+        <property name="placeholderText">
+         <string>Quantité minimale</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="maxQuantityLineEdit">
+        <property name="placeholderText">
+         <string>Quantité maximale</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="componentNameLineEdit">
+        <property name="placeholderText">
+         <string>Nom du composant</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+    <widget class="QGroupBox" name="ternaryGraphGroup">
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QLabel" name="ternaryGraphLabel">
+        <property name="text">
+         <string>Graphique Ternaire</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="ternaryGraphWidget"/>
+      </item>
+     </layout>
+    </widget>
+    <widget class="QGroupBox" name="scoresGroup">
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="QLabel" name="scoresLabel">
+        <property name="text">
+         <string>Scores et Directions</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="scoresTextEdit"/>
+      </item>
+     </layout>
+    </widget>
+   </layout>
+  </widget>
+  <menuBar class="QMenuBar" name="menubar"/>
+  <statusBar class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

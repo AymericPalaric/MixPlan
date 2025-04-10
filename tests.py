@@ -33,12 +33,22 @@ def interpol_from_xps(Xs, Ys, Zs, scores):
     scores = np.array(scores)
 
     # Create the RBF interpolator
-    rbf = RBFInterpolator(points_cartesian, scores, kernel='multiquadric', epsilon=1)
+    # rbf = RBFInterpolator(points_cartesian, scores, kernel='multiquadric', epsilon=1)
+    rbf = LinearNDInterpolator(points_cartesian, scores)
 
     # Define the heatmap function used by ternary.heatmapf
     def f(p):
+        # cart = np.array([ternary_to_cartesian(p)])
+        # return float(rbf(cart))
+        # Convert ternary coordinates to cartesian
         cart = np.array([ternary_to_cartesian(p)])
-        return float(rbf(cart))
+        # Get the interpolated value
+        score = rbf(cart)
+        # If the score is NaN, return 0
+        if np.isnan(score):
+            return 0
+        # Return the score
+        return float(score)
 
     return f
 

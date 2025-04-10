@@ -47,12 +47,16 @@ tax.ticks(axis='lbr', linewidth=1)
 # Remove default Matplotlib Axes
 tax.clear_matplotlib_ticks()
 
+Xs = np.array([0.8, 0.1, 0.1, 1/3, 0.1, 0.45, 0.45])*scale
+Ys = np.array([0.1, 0.8, 0.1, 1/3, 0.45, 0.45, 0.1])*scale
+Zs = np.array([0.1, 0.1, 0.8, 1/3, 0.45, 0.1, 0.45])*scale
+scores = [13, 72, 54, 90, 62, 16, 69]
 # Convert ternary coordinates to the scale of the plot
 points = list(zip(Xs, Ys, Zs))
 
 # Example scores
 print(points)
-scores = [0, 0, 0, 1, 1, 1, 3]
+# scores = [0, 0, 0, 1, 1, 1, 3]
 heatmap_function = interpol_from_xps(Xs, Ys, Zs, scores)
 tax.heatmapf(heatmap_function, boundary=True, style="triangular")
 tax.scatter(points, marker='o', color='red', label="Experience Points")
