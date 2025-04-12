@@ -172,7 +172,7 @@ class QuadraticInterpolator(Interpolator):
         return np.column_stack((
             t_points[:, 0],
             t_points[:, 1],
-            t_points[:, 2],
+            t_points[:, 2] + 1e-6,  # Avoid division by zero
             t_points[:, 0] * t_points[:, 1],
             t_points[:, 0] * t_points[:, 2],
             t_points[:, 1] * t_points[:, 2],
@@ -184,7 +184,7 @@ class QuadraticInterpolator(Interpolator):
         # with A = (X1, X2, X3, X1*X2, X1*X3, X2*X3, X1*X2*X3)
         points = self.points[:7]
         # Convert ternary coordinates to quadratic coordinates
-        A = self.ternary_to_quadratic(points)
+        A = self.ternary_to_quadratic(points).T
         # Convert the scores to a column vector
         scores = np.array(self.scores[:7]).T
         # Compute the coefficients of the quadratic interpolation

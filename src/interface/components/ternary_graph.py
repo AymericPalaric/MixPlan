@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 import ternary
+from ternary.helpers import project_point
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import numpy as np
-from scipy.interpolate import LinearNDInterpolator
+from scipy.spatial import ConvexHull
 from matplotlib.figure import Figure
 
 class TernaryGraph(QWidget):
@@ -22,6 +23,7 @@ class TernaryGraph(QWidget):
         self.scores = []  # Liste des scores associés
         self.parameters = None  # Stockage des paramètres min/max/nom
         self.R2_score = None  # Stockage du score R2
+        self.constraint_mask = None  # Stockage de la heatmap des contraintes
 
         # Configuration initiale du graphe
         self.initialize_graph()
@@ -51,6 +53,34 @@ class TernaryGraph(QWidget):
             self.tax.left_axis_label(f'{self.parameters["component_3"]["name"]} (%)', fontsize=fontsize)
             self.tax.right_axis_label(f'{self.parameters["component_2"]["name"]} (%)', fontsize=fontsize)
             self.tax.bottom_axis_label(f'{self.parameters["component_1"]["name"]} (%)', fontsize=fontsize)
+
+            # TODO :Prendre en compte les contraintes min/max :
+            # -> Dessiner les lignes de contraintes pour chaque composant, dessinant ainsi un triangle intérieur
+            for i in range(1, 4):
+                min_val = self.parameters[f"component_{i}"]["min"]
+                max_val = self.parameters[f"component_{i}"]["max"]
+                if min_val is not None:
+                    p1 = [None, None, None]
+                    p2 = [None, None, None]
+                    p1[i-1] = min_val
+                    p1[i%3] = 0
+                    p1[(i+1)%3] = 100 - min_val
+                    p2[i-1] = min_val
+                    p2[i%3] = 100 - min_val
+                    p2[(i+1)%3] = 0
+                    self.tax.line(p1, p2, color='red', linewidth=2, linestyle='--')
+                if max_val is not None:
+                    p1 = [None, None, None]
+                    p2 = [None, None, None]
+                    p1[i-1] = max_val
+                    p1[i%3] = 0
+                    p1[(i+1)%3] = 100 - max_val
+                    p2[i-1] = max_val
+                    p2[i%3] = 100 - max_val
+                    p2[(i+1)%3] = 0
+                    self.tax.line(p1, p2, color='red', linewidth=2, linestyle='--')
+            # Griser les zones hors contraintes
+            self.draw_constraints_overlay()
         else:
             # Noms par défaut
             self.tax.left_axis_label("Composant 3", fontsize=fontsize)
@@ -65,7 +95,6 @@ class TernaryGraph(QWidget):
         if self.R2_score is not None:
             self.tax.set_title(f"R²: {self.R2_score:.2f}", fontsize=fontsize)
 
-        # Redessiner
         self.canvas.draw()
 
     def add_point(self, a, b, c, score):
@@ -115,13 +144,8 @@ class TernaryGraph(QWidget):
         :param parameters: Dictionnaire contenant les valeurs min et max pour chaque composant.
         """
         self.parameters = parameters
-
-        # Vérifier que les paramètres sont valides
-        for component, values in parameters.items():
-            if values["min"] is None or values["max"] is None:
-                print(f"Paramètres invalides pour {component}: {values}")
-                return
-
+        self.constraint_mask = self.generate_constraint_mask()
+        self.update_graph()
         # Réafficher les points existants
         self.update_graph()
     
@@ -162,3 +186,102 @@ class TernaryGraph(QWidget):
             return None, None, None
 
         return b, t, a
+
+    def ternary_to_cartesian(self, points):
+        """
+        Convertit une liste de points ternaires (a, b, c) en cartésien pour matplotlib.
+        """
+        from ternary.helpers import project_point
+        return [project_point(p) for p in points]
+
+    def generate_constraint_mask(self, resolution=2):
+        """
+        Génère un masque des zones hors contraintes en heatmap (valeurs 0 ou 1).
+        """
+        if self.parameters is None:
+            return None
+
+        func = self.constraint_mask_function()
+        scale = 100
+        d = resolution
+
+        # Générer les triplets possibles
+        data = {}
+        for i in range(scale + 1):
+            for j in range(scale + 1 - i):
+                k = scale - i - j
+                a, b, c = i / scale, j / scale, k / scale
+                data[(i, j, k)] = func((a, b, c))
+
+        return data
+
+    def constraint_mask_function(self):
+        """
+        Crée une fonction qui retourne 1 pour les zones en dehors des contraintes, 0 sinon.
+        Utilisée pour griser les zones invalides.
+        """
+        if self.parameters is None:
+            return lambda p: 0  # Pas de contrainte
+
+        def is_outside(p):
+            a, b, c = p
+            for i, comp in enumerate(['component_1', 'component_2', 'component_3']):
+                val = [a, b, c][i]
+                min_val = self.parameters[comp]["min"]
+                max_val = self.parameters[comp]["max"]
+                if (min_val is not None and val * 100 < min_val) or (max_val is not None and val * 100 > max_val):
+                    return 1
+            return 0
+
+        return is_outside
+
+
+    def draw_constraints_overlay(self):
+        """
+        Grise les zones hors contraintes en dessinant un masque via matplotlib.
+        """
+        if self.parameters is None:
+            return
+
+        constraints = self.parameters
+
+        def get_bound(c, which):
+            return constraints[c][which] if constraints[c][which] is not None else (0 if which == "min" else 100)
+
+        min1 = get_bound("component_1", "min")
+        max1 = get_bound("component_1", "max")
+        min2 = get_bound("component_2", "min")
+        max2 = get_bound("component_2", "max")
+        min3 = get_bound("component_3", "min")
+        max3 = get_bound("component_3", "max")
+
+        valid = []
+        max1 = int(max1) or 100
+        max2 = int(max2) or 100
+        max3 = int(max3) or 100
+        min1 = int(min1) or 0
+        min2 = int(min2) or 0
+        min3 = int(min3) or 0
+        for a in range(min1, max1 + 1, 2):
+            for b in range(min2, max2 + 1, 2):
+                c = 100 - a - b
+                if min3 <= c <= max3 and a >= 0 and b >= 0 and c >= 0:
+                    valid.append((a, b, c))
+
+        if not valid:
+            return
+
+        pts_2d = np.array([[p[0], p[1]] for p in valid])
+        try:
+            hull = ConvexHull(pts_2d)
+            polygon = [valid[i] for i in hull.vertices]
+        except:
+            polygon = valid
+
+        outer_triangle = [(0, 0, 100), (0, 100, 0), (100, 0, 0)]
+        outer_cart = self.ternary_to_cartesian(outer_triangle)
+        valid_cart = self.ternary_to_cartesian(polygon)
+
+        # Dessiner le masque
+        self.ax.fill(*zip(*outer_cart), color='lightgrey', alpha=0.4, zorder=0)
+        self.ax.fill(*zip(*valid_cart), color='white', alpha=1.0, zorder=1)

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout
 from PyQt5.QtCore import Qt
 
 from src.interface.utils.points_lists import *
@@ -29,16 +29,23 @@ class ParametersPanel(QWidget):
             self.layout.addWidget(name_input)
             self.component_names[f"component_{i}_name"] = name_input
 
-            self.names.append(QLabel(f"Composant {i}"))
+            self.names.append(QLabel(f"Contraintes pour Composant {i}"))
             self.layout.addWidget(self.names[-1])
-            # Champs min/max
+
+            # Champs min/max (collés horizontalement)
+            min_max_layout = QHBoxLayout()
+            # min_max_layout.setAlignment(Qt.AlignLeft)
+            min_max_layout.setSpacing(10)
             min_input = QLineEdit()
             min_input.setPlaceholderText(f"Valeur min composant {i}")
-            self.layout.addWidget(min_input)
+            min_max_layout.addWidget(min_input)
+            min_max_layout.addStretch(1)
 
             max_input = QLineEdit()
             max_input.setPlaceholderText(f"Valeur max composant {i}")
-            self.layout.addWidget(max_input)
+            min_max_layout.addWidget(max_input)
+            min_max_layout.addStretch(1)
+            self.layout.addLayout(min_max_layout)
 
             self.component_inputs[f"component_{i}_min"] = min_input
             self.component_inputs[f"component_{i}_max"] = max_input
@@ -69,14 +76,17 @@ class ParametersPanel(QWidget):
         for i in range(1, 4):
             try:
                 min_val = float(self.component_inputs[f"component_{i}_min"].text())
+            except ValueError:
+                min_val = None
+            try:
                 max_val = float(self.component_inputs[f"component_{i}_max"].text())
             except ValueError:
-                min_val, max_val = 0, 100
+                max_val = None
 
             name = self.component_names[f"component_{i}_name"].text()
             if not name:
                 name = f"Composant {i}"
-            self.names[i-1].setText(name)
+            self.names[i-1].setText(f"Contraintes pour {name}")
             self.names[i-1].setToolTip(name)
 
             # Changement des placeholders
