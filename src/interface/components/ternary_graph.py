@@ -13,18 +13,24 @@ class TernaryGraph(QWidget):
         self.setLayout(self.layout)
 
         # Créer une figure matplotlib standard
-        self.figure = Figure(layout="constrained")
+        self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.canvas)
 
         # Initialisation des données
         self.points = []  # Liste des points ajoutés (ternary coordinates)
         self.scores = []  # Liste des scores associés
-        self.parameters = None  # Stockage des paramètres min/max
+        self.parameters = None  # Stockage des paramètres min/max/nom
         self.R2_score = None  # Stockage du score R2
 
         # Configuration initiale du graphe
         self.initialize_graph()
+    
+    def set_initial_points(self, points):
+        """Définir les points initiaux pour le graphe."""
+        self.points = points
+        self.scores = [0] * len(points)
+        self.update_graph()
 
     def initialize_graph(self):
         """Initialise le graphe ternaire."""
@@ -36,15 +42,22 @@ class TernaryGraph(QWidget):
 
         # Configuration du triangle
         self.tax.boundary(linewidth=2.0)
-        self.tax.gridlines(color="black", multiple=20)
         self.tax.gridlines(color="blue", multiple=10, linewidth=0.5)
 
         # Définir les labels des axes
         fontsize = 15
-        self.tax.left_axis_label("Composant 3", fontsize=fontsize)
-        self.tax.right_axis_label("Composant 2", fontsize=fontsize)
-        self.tax.bottom_axis_label("Composant 1", fontsize=fontsize)
-        self.tax.ticks(axis='lbr', linewidth=1)
+        if self.parameters is not None:
+            # Utiliser les noms des composants si disponibles
+            self.tax.left_axis_label(f'{self.parameters["component_3"]["name"]} (%)', fontsize=fontsize)
+            self.tax.right_axis_label(f'{self.parameters["component_2"]["name"]} (%)', fontsize=fontsize)
+            self.tax.bottom_axis_label(f'{self.parameters["component_1"]["name"]} (%)', fontsize=fontsize)
+        else:
+            # Noms par défaut
+            self.tax.left_axis_label("Composant 3", fontsize=fontsize)
+            self.tax.right_axis_label("Composant 2", fontsize=fontsize)
+            self.tax.bottom_axis_label("Composant 1", fontsize=fontsize)
+
+        self.tax.ticks(axis='lbr', linewidth=1, multiple=10)
 
         # Supprimer les ticks de matplotlib
         self.tax.clear_matplotlib_ticks()
@@ -109,28 +122,16 @@ class TernaryGraph(QWidget):
                 print(f"Paramètres invalides pour {component}: {values}")
                 return
 
-        # Appliquer les contraintes sur le graphe
-        self.initialize_graph()
-
-        # Ajouter une zone ombrée pour représenter les contraintes
-        min_c1 = parameters["component_1"]["min"]
-        max_c1 = parameters["component_1"]["max"]
-        min_c2 = parameters["component_2"]["min"]
-        max_c2 = parameters["component_2"]["max"]
-        min_c3 = parameters["component_3"]["min"]
-        max_c3 = parameters["component_3"]["max"]
-
-        # Exemple : Ajouter une zone de contrainte (simplifiée)
-        constraint_points = [
-            (min_c1, min_c2, 1 - min_c1 - min_c2),
-            (max_c1, min_c2, 1 - max_c1 - min_c2),
-            (min_c1, max_c2, 1 - min_c1 - max_c2),
-            (max_c1, max_c2, 1 - max_c1 - max_c2),
-        ]
-        scaled_constraints = [(p[0] * 100, p[1] * 100, p[2] * 100) for p in constraint_points if sum(p) <= 1.0]
-        self.tax.scatter(scaled_constraints, marker='x', color='blue', label="Contraintes")
-
         # Réafficher les points existants
+        self.update_graph()
+    
+
+    def update_point(self, row, a, b, c, score):
+        """Met à jour un point existant dans le graphe."""
+        if row < 0 or row >= len(self.points):
+            raise IndexError("Index de ligne invalide")
+        self.points[row] = (a, b, c)
+        self.scores[row] = score
         self.update_graph()
     
     def enable_click_callback(self, callback):

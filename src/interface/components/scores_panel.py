@@ -1,7 +1,9 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QListWidget, QPushButton,
-    QLineEdit, QComboBox
+    QLineEdit, QComboBox, QTableWidget, QTableWidgetItem,
+    QHeaderView, QAbstractItemView, QMessageBox, QHBoxLayout
 )
+from PyQt5.QtCore import Qt
 from functools import partial
 from src.algo.interpolator import *
 
@@ -20,10 +22,13 @@ class ScoresPanel(QWidget):
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
-        # Liste des scores
-        self.layout.addWidget(QLabel("Scores"))
-        self.scores_list = QListWidget()
-        self.layout.addWidget(self.scores_list)
+        # Tableau de points (X, Y, Z, Score)
+        self.points_table = QTableWidget()
+        self.points_table.setColumnCount(4)
+        self.points_table.setHorizontalHeaderLabels(["X", "Y", "Z", "Score"])
+        self.points_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.points_table.setEditTriggers(QTableWidget.AllEditTriggers)
+        self.layout.addWidget(self.points_table)
 
         # Champs pour ajouter un point
         self.layout.addWidget(QLabel("Ajouter un point :"))
@@ -75,10 +80,16 @@ class ScoresPanel(QWidget):
         except ValueError:
             return None
 
-    def update_scores_list(self, point_data):
-        """Met à jour la liste des scores avec un nouveau point."""
-        x, y, z, score = point_data
-        self.scores_list.addItem(f"Point ({x}, {y}, {z}) - Score: {score}")
+    def update_points_table(self, point_data):
+        """Ajoute un point dans le tableau."""
+        row_position = self.points_table.rowCount()
+        self.points_table.insertRow(row_position)
+        for i, value in enumerate(point_data):
+            item = QTableWidgetItem(str(value))
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
+            # round to 3 decimal places
+            item.setData(Qt.EditRole, round(value, 3))
+            self.points_table.setItem(row_position, i, item)
 
     def clear_inputs(self):
         """Efface les champs d'entrée."""
@@ -87,9 +98,8 @@ class ScoresPanel(QWidget):
         self.z_input.clear()
         self.score_input.clear()
 
-    def clear_scores_list(self):
-        """Efface la liste des scores."""
-        self.scores_list.clear()
+    def clear_scores_table(self):
+        self.points_table.setRowCount(0)
 
     def clear(self):
         """Efface les champs d'entrée et la liste des scores."""
