@@ -136,6 +136,7 @@ class LinearInterpolator(Interpolator):
     
     def recompute(self,):
         points = self.points[:3].T
+        points[-1] += 1e-6  # Avoid division by zero
         scores = self.scores[:3]
         # Compute the coefficients of the linear interpolation
         self.coeffs = np.dot(scores, np.linalg.inv(points))
