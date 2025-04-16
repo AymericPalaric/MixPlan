@@ -19,6 +19,14 @@ class TernaryGraph(QWidget):
         # Créer une figure matplotlib standard
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
+
+        self._is_panning = False
+        self._pan_start = None
+
+        self.canvas.mpl_connect("button_press_event", self.on_mouse_press)
+        self.canvas.mpl_connect("button_release_event", self.on_mouse_release)
+        self.canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
+        self.canvas.mpl_connect("scroll_event", self.on_scroll)
         self.layout.addWidget(self.canvas)
 
         # Initialisation des données
@@ -291,3 +299,67 @@ class TernaryGraph(QWidget):
         # Dessiner le masque
         self.ax.fill(*zip(*outer_cart), color='lightgrey', alpha=0.4, zorder=0)
         self.ax.fill(*zip(*valid_cart), color='white', alpha=1.0, zorder=1)
+    
+
+    def on_scroll(self, event):
+        base_scale = 1.2
+        ax = self.ax
+
+        # Zoom in
+        if event.button == 'up':
+            scale_factor = 1 / base_scale
+        # Zoom out
+        elif event.button == 'down':
+            scale_factor = base_scale
+        else:
+            scale_factor = 1
+
+        # Get current x and y limits
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+
+        # Get mouse position in axis coordinates
+        xdata = event.xdata
+        ydata = event.ydata
+
+        if xdata is None or ydata is None:
+            return
+
+        new_xlim = [
+            xdata - (xdata - xlim[0]) * scale_factor,
+            xdata + (xlim[1] - xdata) * scale_factor
+        ]
+        new_ylim = [
+            ydata - (ydata - ylim[0]) * scale_factor,
+            ydata + (ylim[1] - ydata) * scale_factor
+        ]
+
+        ax.set_xlim(new_xlim)
+        ax.set_ylim(new_ylim)
+        self.canvas.draw_idle()
+
+    def on_mouse_press(self, event):
+        if event.button == 3:  # clic droit
+            self._is_panning = True
+            self._pan_start = (event.xdata, event.ydata)
+
+    def on_mouse_release(self, event):
+        if event.button == 3:
+            self._is_panning = False
+            self._pan_start = None
+
+    def on_mouse_move(self, event):
+        if not self._is_panning or event.xdata is None or event.ydata is None:
+            return
+
+        dx = self._pan_start[0] - event.xdata
+        dy = self._pan_start[1] - event.ydata
+
+        xlim = self.ax.get_xlim()
+        ylim = self.ax.get_ylim()
+
+        self.ax.set_xlim(xlim[0] + dx, xlim[1] + dx)
+        self.ax.set_ylim(ylim[0] + dy, ylim[1] + dy)
+        self.canvas.draw_idle()
+
+        self._pan_start = (event.xdata, event.ydata)
