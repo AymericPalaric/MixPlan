@@ -106,30 +106,33 @@ class MainWindow(QMainWindow):
         max_values = [parameters[f"component_{i}"]["max"] or 100 for i in range(1, 4)]
         real_max_values = [min(max_values[i], 100 - min_values[(i+1)%3] - min_values[(i+2)%3]) for i in range(3)]
         real_min_values = min_values # [min_values[i] + max_values[(i+1)%3] + max_values[(i+2)%3] for i in range(3)]
-        if order.isdigit() or selected_plan == "Type III":
-            order = int(order) if order.isdigit() else 0
-            # update points coordinates with min and max values
-            points = [
-                [
-                    (real_min_values[i] + (real_max_values[i] - real_min_values[i]) * p[i])/100 for i in range(3)
-                ]
-                for p in POINTS_LISTS[selected_plan][3, order]
-            ] if selected_plan != "Type III" else POINTS_LISTS[selected_plan][3, order]
-            points_data = [
-                (points[i][0], points[i][1], points[i][2], 0) for i in range(len(points))
+        try:
+            order = int(order) if selected_plan != "Type III" else order
+        except ValueError:
+            if POINTS_LISTS[selected_plan].order:
+                gui_logger.log("Ordre de configuration invalide", level="warning")
+                return
+
+        order = int(order) if order.isdigit() else 0
+        # update points coordinates with min and max values
+        points = [
+            [
+                (real_min_values[i] + (real_max_values[i] - real_min_values[i]) * p[i])/100 for i in range(3)
             ]
-            if selected_plan == "Type III":
-                X = np.array(points)
-                gui_logger.log("Score de l'algorithm de Fedorov (D-Optimality) :", np.linalg.det(X.T @ X))
-            self.ternary_graph.set_initial_points(points)
-            self.scores_panel.clear_scores_table()
-            for point in points_data:
-                self.scores_panel.update_points_table(point)
-            gui_logger.log(f"Lancement du plan d'expérience : {selected_plan} avec ordre {order}")
-            gui_logger.log("N'oubliez pas de modifier les scores dans le tableau !", level="user_action")
-        else:
-            gui_logger.log("Ordre de configuration invalide", level="warning")
-        
+            for p in POINTS_LISTS[selected_plan][3, order]
+        ] if selected_plan != "Type III" else POINTS_LISTS[selected_plan][3, order]
+        points_data = [
+            (points[i][0], points[i][1], points[i][2], 0) for i in range(len(points))
+        ]
+        if selected_plan == "Type III":
+            X = np.array(points)
+            gui_logger.log("Score de l'algorithm de Fedorov (D-Optimality) :", np.linalg.det(X.T @ X))
+        self.ternary_graph.set_initial_points(points)
+        self.scores_panel.clear_scores_table()
+        for point in points_data:
+            self.scores_panel.update_points_table(point)
+        gui_logger.log(f"Lancement du plan d'expérience : {selected_plan} avec ordre {order}")
+        gui_logger.log("N'oubliez pas de modifier les scores dans le tableau !", level="user_action")
 
     def update_hull(self, polygon):
         self.polygon = polygon

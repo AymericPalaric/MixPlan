@@ -6,6 +6,7 @@ __all__ = [
     "SimplexCentroid",
     "ScheffeNetwork",
     "TypeIIIPlan",
+    "SimplexCentroidGrowth",
     ]
 
 class SimplexCentroid:
@@ -17,6 +18,7 @@ class SimplexCentroid:
         - repeated according to the degree m,
         - totaling k * m + 1 points.
     """
+    order = True
 
     def __getitem__(self, config):
         """
@@ -55,6 +57,64 @@ class SimplexCentroid:
         return points
 
 
+class SimplexCentroidGrowth(SimplexCentroid):
+    """
+    A class to represent a simplex centroid with growth mixture design.
+
+    A (k, m) simplex centroid plan consists of:
+        - all mixtures of 1 to k components in equal proportions,
+        - repeated according to the degree m,
+        - totaling k * m + 1 points.
+        - center of the 3 sub-triangles (only for k=3)
+    """
+    order = False
+
+    def __getitem__(self, config):
+        """
+        Generate the simplex centroid design.
+
+        Parameters:
+            config (tuple): (k, m)
+                - k: number of components
+                - m: degree of the model to approximate
+
+        Returns:
+            List[Tuple[float, ...]]: list of points (each point is a tuple of k proportions)
+        """
+        points = super().__getitem__((3, 2))
+        k, m = config
+        assert k==3, "Only k=3 is supported for growth design"
+
+        # Generate the growth points (centroid of the 3 sub-triangles)
+        growth_points = []
+        triangles = [
+            [
+                (1, 0, 0),
+                (0.5, 0.5, 0),
+                (0.5, 0, 0.5),
+            ],
+            [
+                (0, 1, 0),
+                (0.5, 0.5, 0),
+                (0, 0.5, 0.5),
+            ],
+            [
+                (0, 0, 1),
+                (0.5, 0, 0.5),
+                (0, 0.5, 0.5),
+            ]
+        ]
+        for triangle in triangles:
+            # Calculate the centroid of the triangle
+            centroid = tuple(sum(coord) / len(triangle) for coord in zip(*triangle))
+            growth_points.append(centroid)
+
+        # Add the growth points to the existing points
+        points.extend(growth_points)
+
+        return points
+
+
 class ScheffeNetwork:
     """
     Generate a simplex lattice (Scheffé network) design.
@@ -64,6 +124,7 @@ class ScheffeNetwork:
 
     The resulting design has C(m + k - 1, m) points.
     """
+    order = True
 
     def __getitem__(self, config):
         """
@@ -96,6 +157,7 @@ class TypeIIIPlan:
     def __init__(self, polygon):
         self.polygon = [tuple([x/100, y/100, z/100]) for (x, y, z) in polygon]
         self.points = self.generate_points()
+        self.order = False
     
     def generate_points(self):
         # Generate points based on the polygon :
@@ -180,7 +242,8 @@ class TypeIIIPlan:
 if __name__ == "__main__":
     # Example usage
     # design = SimplexCentroid()
-    design = ScheffeNetwork()
+    design = SimplexCentroidGrowth()
     points = design[(3, 1)]  # 3 components, degree 2
+    print(design.order)
     for point in points:
         print(point)

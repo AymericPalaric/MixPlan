@@ -8,6 +8,7 @@ from src.interface.utils.console import SmartConsole
 POINTS_LISTS = {
     "SimplexCentroid": SimplexCentroid(),
     "ScheffeNetwork": ScheffeNetwork(),
+    "SimplexCentroidGrowth": SimplexCentroidGrowth(),
 }
 
 class ParametersPanel(QWidget):
@@ -70,6 +71,9 @@ class ParametersPanel(QWidget):
         self.plan_order.setPlaceholderText("Ordre de la configuration")
         plan_type_order.addWidget(self.plan_order)
         self.layout.addLayout(plan_type_order)
+
+        # On selector switch, change enabled state of order input
+        self.initial_points_selector.currentTextChanged.connect(lambda text: self.plan_order.setEnabled(POINTS_LISTS[text].order))
 
         self.launch_plan_button = QPushButton("Initialiser le plan")
         self.layout.addWidget(self.launch_plan_button)
