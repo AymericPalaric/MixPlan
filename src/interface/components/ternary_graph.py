@@ -5,10 +5,13 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import numpy as np
 from scipy.spatial import ConvexHull
 from matplotlib.figure import Figure
+from src.interface.utils.logger import gui_logger
 
 class TernaryGraph(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.parent_ = parent
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -24,6 +27,7 @@ class TernaryGraph(QWidget):
         self.parameters = None  # Stockage des paramètres min/max/nom
         self.R2_score = None  # Stockage du score R2
         self.constraint_mask = None  # Stockage de la heatmap des contraintes
+        self.polygon = None  # Stockage de l'enveloppe convexe pour les contraintes
 
         # Configuration initiale du graphe
         self.initialize_graph()
@@ -122,7 +126,7 @@ class TernaryGraph(QWidget):
         points = np.array(self.points)
         scores = np.array(self.scores)
         if len(self.points) < interpolator_cls.min_num_points:
-            print("Pas assez de points pour interpoler")
+            gui_logger.log("Pas assez de points pour interpoler", level="warning")
             return None
 
         # Créer l'interpolateur
@@ -148,6 +152,7 @@ class TernaryGraph(QWidget):
         self.update_graph()
         # Réafficher les points existants
         self.update_graph()
+        return self.polygon
     
 
     def update_point(self, row, a, b, c, score):
@@ -275,6 +280,7 @@ class TernaryGraph(QWidget):
         try:
             hull = ConvexHull(pts_2d)
             polygon = [valid[i] for i in hull.vertices]
+            self.polygon = polygon
         except:
             polygon = valid
 

@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from functools import partial
 from src.algo.interpolator import *
+from src.interface.utils.logger import gui_logger
 
 # Dictionnaire des interpolateurs disponibles
 INTERPOLATORS = {
@@ -32,21 +33,24 @@ class ScoresPanel(QWidget):
 
         # Champs pour ajouter un point
         self.layout.addWidget(QLabel("Ajouter un point :"))
+
+        point_layout = QHBoxLayout()
         self.x_input = QLineEdit()
         self.x_input.setPlaceholderText("X")
-        self.layout.addWidget(self.x_input)
+        point_layout.addWidget(self.x_input)
 
         self.y_input = QLineEdit()
         self.y_input.setPlaceholderText("Y")
-        self.layout.addWidget(self.y_input)
+        point_layout.addWidget(self.y_input)
 
         self.z_input = QLineEdit()
         self.z_input.setPlaceholderText("Z")
-        self.layout.addWidget(self.z_input)
+        point_layout.addWidget(self.z_input)
 
         self.score_input = QLineEdit()
         self.score_input.setPlaceholderText("Score")
-        self.layout.addWidget(self.score_input)
+        point_layout.addWidget(self.score_input)
+        self.layout.addLayout(point_layout)
 
         # Bouton pour ajouter un point
         self.add_button = QPushButton("Ajouter")
@@ -110,4 +114,4 @@ class ScoresPanel(QWidget):
         """Met à jour l'interpolateur sélectionné."""
         selected_name = self.interpolator_selector.currentText()
         self.interpolator = INTERPOLATORS[selected_name]
-        print(f"Interpolateur sélectionné : {selected_name}")
+        gui_logger.log(f"Interpolateur sélectionné : {selected_name}")

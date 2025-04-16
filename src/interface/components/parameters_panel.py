@@ -1,7 +1,9 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout, QTextEdit
+from PyQt5.QtCore import Qt, QTimer
 
-from src.interface.utils.points_lists import *
+from src.algo.points_lists import *
+from src.interface.utils.logger import gui_logger
+from src.interface.utils.console import SmartConsole
 
 POINTS_LISTS = {
     "SimplexCentroid": SimplexCentroid(),
@@ -56,19 +58,30 @@ class ParametersPanel(QWidget):
         if parent:
             self.update_button.clicked.connect(parent.update_graph_and_scores)
         
-        self.layout.addSpacing(100)
+        self.layout.addSpacing(70)
         # Menu déroulant pour choisir la liste de points initiaux
         self.layout.addWidget(QLabel("Sélectionner une configuration de plan d'expérience :"))
+        plan_type_order = QHBoxLayout()
         self.initial_points_selector = QComboBox()
         self.initial_points_selector.addItems(POINTS_LISTS.keys())
-        self.layout.addWidget(self.initial_points_selector)
+        plan_type_order.addWidget(self.initial_points_selector)
 
         self.plan_order = QLineEdit()
         self.plan_order.setPlaceholderText("Ordre de la configuration")
-        self.layout.addWidget(self.plan_order)
+        plan_type_order.addWidget(self.plan_order)
+        self.layout.addLayout(plan_type_order)
 
         self.launch_plan_button = QPushButton("Initialiser le plan")
         self.layout.addWidget(self.launch_plan_button)
+
+        # Ajout d’un champ console pour les logs
+        self.console = SmartConsole()
+        # self.console.setFixedHeight(150)  # ajustable selon ton besoin
+        self.console.setStyleSheet("background-color: #1e1e1e; color: white; font-family: Consolas;")
+        self.layout.addWidget(QLabel("Console :"))
+        self.layout.addWidget(self.console)
+
+        gui_logger.log_signal.connect(self.log)
 
 
     def get_parameters(self):
@@ -113,11 +126,54 @@ class ParametersPanel(QWidget):
                 if order < 1:
                     raise ValueError("L'ordre doit être supérieur à 0")
             except ValueError:
-                print("Erreur : L'ordre doit être un entier positif.")
+                gui_logger.log("L'ordre doit être un entier positif.", level="error")
                 return
 
             # Récupérer la classe de points correspondante
             points_class = POINTS_LISTS[selected_plan]
             points = points_class[3,order].get_points()
-            print(f"Points initiaux pour {selected_plan} (ordre {order}) : {points}")
-        
+            gui_logger.log(f"Points initiaux pour {selected_plan} (ordre {order}) : {points}")
+    
+    def log(self, message, level="INFO"):
+        level = level.upper()
+        color = {
+            "ERROR": "red",
+            "WARNING": "orange",
+            "INFO": "white",
+            "USER_ACTION": "yellow",  # pour clignotement
+        }.get(level, "white")
+
+        # Ajout avec style
+        formatted = f'<span style="color:{color}">{message}</span>'
+        self.console.append(formatted)
+
+        # Effet clignotant pour USER_ACTION
+        if level == "USER_ACTION":
+            self.blink_text(message)
+
+    def blink_text(self, msg):
+        def toggle_visibility():
+            if self.console.toPlainText().endswith(msg):
+                # remove the last line (the blinking message)
+                cursor = self.console.textCursor()
+                cursor.movePosition(cursor.End, cursor.MoveAnchor)
+                cursor.select(cursor.BlockUnderCursor)
+                cursor.removeSelectedText()
+                cursor.deleteChar()
+                self.console.setTextCursor(cursor)
+            else:
+                self.console.append(f'<span style="color:yellow">{msg}</span>')
+
+        # Faire clignoter 3 fois
+        timer = QTimer(self)
+        timer.setInterval(300)
+        count = {"value": 0}
+
+        def update():
+            toggle_visibility()
+            count["value"] += 1
+            if count["value"] >= 10:
+                timer.stop()
+
+        timer.timeout.connect(update)
+        timer.start()
