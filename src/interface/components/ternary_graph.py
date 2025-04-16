@@ -158,8 +158,6 @@ class TernaryGraph(QWidget):
         self.parameters = parameters
         self.constraint_mask = self.generate_constraint_mask()
         self.update_graph()
-        # Réafficher les points existants
-        self.update_graph()
         return self.polygon
     
 

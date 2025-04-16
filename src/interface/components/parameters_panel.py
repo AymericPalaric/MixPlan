@@ -73,7 +73,7 @@ class ParametersPanel(QWidget):
         self.layout.addLayout(plan_type_order)
 
         # On selector switch, change enabled state of order input
-        self.initial_points_selector.currentTextChanged.connect(lambda text: self.plan_order.setEnabled(POINTS_LISTS[text].order))
+        self.initial_points_selector.currentTextChanged.connect(self.enable_plan_order)
 
         self.launch_plan_button = QPushButton("Initialiser le plan")
         self.layout.addWidget(self.launch_plan_button)
@@ -181,3 +181,10 @@ class ParametersPanel(QWidget):
 
         timer.timeout.connect(update)
         timer.start()
+    
+    def enable_plan_order(self, text):
+        """Active ou désactive le champ d'ordre selon la sélection de la configuration."""
+        if text:
+            self.plan_order.setEnabled(POINTS_LISTS[text].order)
+        else:
+            self.plan_order.setEnabled(True)
