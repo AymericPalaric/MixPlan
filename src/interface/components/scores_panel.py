@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QListWidget, QPushButton,
     QLineEdit, QComboBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView, QMessageBox, QHBoxLayout
+    QHeaderView, QAbstractItemView, QMessageBox, QHBoxLayout,
+    QGroupBox, 
 )
 from PyQt5.QtCore import Qt
 from functools import partial
@@ -23,49 +24,67 @@ class ScoresPanel(QWidget):
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
+        self.total_mass = None
+
         # Tableau de points (X, Y, Z, Score)
         self.points_table = QTableWidget()
         self.points_table.setColumnCount(4)
-        self.points_table.setHorizontalHeaderLabels(["X", "Y", "Z", "Score"])
+        self.points_table.setHorizontalHeaderLabels(["Comp1 (%)", "Comp2 (%)", "Comp3 (%)", "Score"])
         self.points_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.points_table.setEditTriggers(QTableWidget.AllEditTriggers)
         self.layout.addWidget(self.points_table)
 
+        # Bouton pour afficher un popup qui donne les masses (à partir des pourcentages dans le tableau)
+        self.show_masses_button = QPushButton("Afficher les masses")
+        self.show_masses_button.setStyleSheet("QPushButton { font-weight: bold; font-style: italic; }")
+        self.layout.addWidget(self.show_masses_button)
+        self.show_masses_button.clicked.connect(self.show_masses_popup)
+        self.show_masses_button.setEnabled(False)
+        self.show_masses_button.setToolTip("Rentrer une masse totale dans le panneau de gauche pour activer ce bouton.")
+
         # Champs pour ajouter un point
-        self.layout.addWidget(QLabel("Ajouter un point :"))
+        addpoint_gbox = QGroupBox("Ajouter un point")
+        addpoint_gbox.setStyleSheet("QGroupBox { font-weight: bold; font-style: italic; }")
+        addpoint_layout = QVBoxLayout()
+        addpoint_gbox.setLayout(addpoint_layout)
+        self.layout.addWidget(addpoint_gbox)
 
         point_layout = QHBoxLayout()
         self.x_input = QLineEdit()
-        self.x_input.setPlaceholderText("X")
+        self.x_input.setPlaceholderText("Comp1 (%)")
         point_layout.addWidget(self.x_input)
 
         self.y_input = QLineEdit()
-        self.y_input.setPlaceholderText("Y")
+        self.y_input.setPlaceholderText("Comp2 (%)")
         point_layout.addWidget(self.y_input)
 
         self.z_input = QLineEdit()
-        self.z_input.setPlaceholderText("Z")
+        self.z_input.setPlaceholderText("Comp3 (%)")
         point_layout.addWidget(self.z_input)
 
         self.score_input = QLineEdit()
         self.score_input.setPlaceholderText("Score")
         point_layout.addWidget(self.score_input)
-        self.layout.addLayout(point_layout)
+        addpoint_layout.addLayout(point_layout)
 
         # Bouton pour ajouter un point
         self.add_button = QPushButton("Ajouter")
-        self.layout.addWidget(self.add_button)
+        addpoint_layout.addWidget(self.add_button)
         self.score_input.returnPressed.connect(self.add_button.click)
 
         # Menu déroulant pour sélectionner l'interpolateur
-        self.layout.addWidget(QLabel("Choisir un interpolateur :"))
+        interpolator_gbox = QGroupBox("Sélectionner un interpolateur")
+        interpolator_gbox.setStyleSheet("QGroupBox { font-weight: bold; font-style: italic; }")
+        interpolator_layout = QVBoxLayout()
+        interpolator_gbox.setLayout(interpolator_layout)
+        self.layout.addWidget(interpolator_gbox)
         self.interpolator_selector = QComboBox()
         self.interpolator_selector.addItems(INTERPOLATORS.keys())
-        self.layout.addWidget(self.interpolator_selector)
+        interpolator_layout.addWidget(self.interpolator_selector)
 
         # Bouton pour lancer l'interpolation
         self.interpolate_button = QPushButton("Interpoler")
-        self.layout.addWidget(self.interpolate_button)
+        interpolator_layout.addWidget(self.interpolate_button)
 
         # Interpolateur actuellement sélectionné (par défaut)
         self.interpolator = INTERPOLATORS[self.interpolator_selector.currentText()]
@@ -115,3 +134,98 @@ class ScoresPanel(QWidget):
         selected_name = self.interpolator_selector.currentText()
         self.interpolator = INTERPOLATORS[selected_name]
         gui_logger.log(f"Interpolateur sélectionné : {selected_name}")
+
+    def update_with_parameters(self, parameters):
+        """Met à jour le tableau avec les paramètres."""
+        # self.clear_scores_table()
+        inputs = [self.x_input, self.y_input, self.z_input]
+        for i in range(1, 4):
+            name = parameters[f"component_{i}"]["name"] + " (%)"
+            if not name:
+                name = f"Comp{i} (%)"
+            self.points_table.setHorizontalHeaderItem(i-1, QTableWidgetItem(name))
+            inputs[i-1].setPlaceholderText(name)
+        
+        self.total_mass = parameters["total_mass"]
+        if self.total_mass:
+            self.show_masses_button.setEnabled(True)
+            self.show_masses_button.setToolTip("Afficher les masses calculées à partir des pourcentages.")
+        else:
+            self.show_masses_button.setEnabled(False)
+            self.show_masses_button.setToolTip("Rentrer une masse totale dans le panneau de gauche pour activer ce bouton.")
+    
+
+    def show_masses_popup(self):
+        """Affiche un popup avec les masses calculées à partir des pourcentages."""
+        if self.total_mass is None:
+            gui_logger.log("Aucune masse totale spécifiée.", level="error")
+            return
+
+        if not hasattr(self, 'mass_popup') or self.mass_popup is None or not self.mass_popup.isVisible():
+            self.mass_popup = MassPopup(self)
+        self.mass_popup.show()
+        self.mass_popup.raise_()
+        self.mass_popup.activateWindow()
+
+
+class MassPopup(QWidget):
+    def __init__(self, parent: ScoresPanel = None):
+        super().__init__(parent)
+        self.parent_scores_panel = parent
+        self.setWindowFlags(Qt.Window)
+        self.setWindowTitle("Masse des points")
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
+        # Tableau des masses
+        self.masses_list = QTableWidget()
+        self.masses_list.setColumnCount(3)
+        
+        column_names = [self.parent_scores_panel.points_table.horizontalHeaderItem(i).text().replace("%", "g") for i in range(3)]
+        self.masses_list.setHorizontalHeaderLabels(column_names)
+
+        # ➔ Options pour rendre le tableau copiable mais pas éditable
+        self.masses_list.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.masses_list.setSelectionBehavior(QTableWidget.SelectItems)
+        self.masses_list.setSelectionMode(QTableWidget.ExtendedSelection)
+        self.masses_list.setStyleSheet("""
+            QTableWidget {
+                selection-background-color: #0078D7;
+                selection-color: white;
+            }
+        """)
+        
+        self.layout.addWidget(self.masses_list)
+
+        # Remplir les données
+        self.populate_masses_table()
+
+        # Bouton fermer
+        self.close_button = QPushButton("Fermer")
+        self.close_button.clicked.connect(self.close)
+        self.layout.addWidget(self.close_button)
+
+        self.adjustSize()
+
+    def populate_masses_table(self):
+        """Remplit le tableau avec les masses calculées à partir des pourcentages."""
+        self.masses_list.setRowCount(0)
+        for i in range(self.parent_scores_panel.points_table.rowCount()):
+            row_position = self.masses_list.rowCount()
+            self.masses_list.insertRow(row_position)
+            for j in range(3):
+                percentage_item = self.parent_scores_panel.points_table.item(i, j)
+                if percentage_item is None:
+                    continue
+                try:
+                    percentage = float(percentage_item.text())
+                except (ValueError, AttributeError):
+                    percentage = 0.0
+
+                mass = percentage * float(self.parent_scores_panel.total_mass)
+                item = QTableWidgetItem(str(round(mass, 3)))
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # Lecture seule mais copiable
+                self.masses_list.setItem(row_position, j, item)
+
+        self.masses_list.resizeColumnsToContents()
+        self.masses_list.resizeRowsToContents()

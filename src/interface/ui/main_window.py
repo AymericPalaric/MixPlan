@@ -30,9 +30,9 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self.scores_panel)
 
         # Définir les proportions initiales
-        splitter.setStretchFactor(0, 2)  # Panneau des paramètres : 1 part
-        splitter.setStretchFactor(1, 3)  # Graphe ternaire : 2 parts (50 %)
-        splitter.setStretchFactor(2, 1)  # Panneau des scores : 1 part
+        splitter.setStretchFactor(0, 3)  # Panneau des paramètres : 1 part
+        splitter.setStretchFactor(1, 4)  # Graphe ternaire : 2 parts (50 %)
+        splitter.setStretchFactor(2, 2)  # Panneau des scores : 1 part
 
         # Définir le widget central
         central_widget = QWidget()
@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
         parameters = self.parameters_panel.get_parameters()
         gui_logger.log("Mise à jour avec les paramètres :", parameters)
         polygon = self.ternary_graph.update_with_parameters(parameters)
+        self.scores_panel.update_with_parameters(parameters)
         self.update_hull(polygon)
     
     def update_score_inputs_from_graph_click(self, a, b, c):
@@ -113,7 +114,6 @@ class MainWindow(QMainWindow):
                 gui_logger.log("Ordre de configuration invalide", level="warning")
                 return
 
-        order = int(order) if order.isdigit() else 0
         # update points coordinates with min and max values
         points = [
             [

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout, QTextEdit, QGroupBox
 from PyQt5.QtCore import Qt, QTimer
 
 from src.algo.points_lists import *
@@ -25,15 +25,19 @@ class ParametersPanel(QWidget):
         self.names = []
 
         for i in range(1, 4):
-            self.layout.addSpacing(50)
+            group_box = QGroupBox(f"Composant {i}")
+            group_box.setStyleSheet("QGroupBox { font-weight: bold; font-style: italic; }")
+            group_layout = QVBoxLayout()
+            group_box.setLayout(group_layout)
+
             # Champ pour le nom
             name_input = QLineEdit()
             name_input.setPlaceholderText(f"Nom du composant {i}")
-            self.layout.addWidget(name_input)
+            group_layout.addWidget(name_input)
             self.component_names[f"component_{i}_name"] = name_input
 
             self.names.append(QLabel(f"Contraintes pour Composant {i}"))
-            self.layout.addWidget(self.names[-1])
+            group_layout.addWidget(self.names[-1])
 
             # Champs min/max (collés horizontalement)
             min_max_layout = QHBoxLayout()
@@ -48,20 +52,29 @@ class ParametersPanel(QWidget):
             max_input.setPlaceholderText(f"Valeur max composant {i}")
             min_max_layout.addWidget(max_input)
             min_max_layout.addStretch(1)
-            self.layout.addLayout(min_max_layout)
+            group_layout.addLayout(min_max_layout)
+
+            self.layout.addWidget(group_box)
 
             self.component_inputs[f"component_{i}_min"] = min_input
             self.component_inputs[f"component_{i}_max"] = max_input
 
+        total_mass = QLineEdit()
+        total_mass.setPlaceholderText("Masse totale du mélange (g)")
+        self.layout.addWidget(total_mass)
+        self.component_inputs["total_mass"] = total_mass
         self.update_button = QPushButton("Mettre à jour")
         self.layout.addWidget(self.update_button)
 
         if parent:
             self.update_button.clicked.connect(parent.update_graph_and_scores)
         
-        self.layout.addSpacing(70)
+        self.layout.addSpacing(10)
+        experience_gbox = QGroupBox("Plan d'expérience")
+        experience_layout = QVBoxLayout()
+        experience_gbox.setLayout(experience_layout)
+        experience_gbox.setStyleSheet("QGroupBox { font-weight: bold; }")
         # Menu déroulant pour choisir la liste de points initiaux
-        self.layout.addWidget(QLabel("Sélectionner une configuration de plan d'expérience :"))
         plan_type_order = QHBoxLayout()
         self.initial_points_selector = QComboBox()
         self.initial_points_selector.addItems(POINTS_LISTS.keys())
@@ -70,13 +83,14 @@ class ParametersPanel(QWidget):
         self.plan_order = QLineEdit()
         self.plan_order.setPlaceholderText("Ordre de la configuration")
         plan_type_order.addWidget(self.plan_order)
-        self.layout.addLayout(plan_type_order)
+        experience_layout.addLayout(plan_type_order)
 
         # On selector switch, change enabled state of order input
         self.initial_points_selector.currentTextChanged.connect(self.enable_plan_order)
 
         self.launch_plan_button = QPushButton("Initialiser le plan")
-        self.layout.addWidget(self.launch_plan_button)
+        experience_layout.addWidget(self.launch_plan_button)
+        self.layout.addWidget(experience_gbox)
 
         # Ajout d’un champ console pour les logs
         self.console = SmartConsole()
@@ -102,7 +116,7 @@ class ParametersPanel(QWidget):
 
             name = self.component_names[f"component_{i}_name"].text()
             if not name:
-                name = f"Composant {i}"
+                name = f"Comp{i}"
             self.names[i-1].setText(f"Contraintes pour {name}")
             self.names[i-1].setToolTip(name)
 
@@ -117,8 +131,21 @@ class ParametersPanel(QWidget):
                 "max": max_val,
                 "name": name,
             }
+        parameters["total_mass"] = self.component_inputs["total_mass"].text()
+        # Vérification de la masse totale
+        try:
+            total_mass_txt = parameters["total_mass"]
+            total_mass = float(total_mass_txt)
+            if total_mass <= 0:
+                raise ValueError("La masse totale doit être supérieure à 0")
+        except ValueError:
+            if total_mass_txt == "":
+                total_mass = None
+            else:
+                gui_logger.log("La masse totale doit être un nombre positif.", level="error")
+                total_mass = None
+            parameters["total_mass"] = total_mass
         return parameters
-
 
     def launch_initial_plan(self):
         """Lance la configuration de plan d'expérience."""
