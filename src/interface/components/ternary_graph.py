@@ -399,6 +399,6 @@ class TernaryGraph(QWidget):
         cart_points = self.ternary_to_cartesian([(a * 100, b * 100, c * 100) for a, b, c in self.points])
         distances = [np.hypot(x - xp, y - yp) for xp, yp in cart_points]
         min_dist = min(distances)
-        if min_dist < 5:  # Seuil de proximité en pixels
+        if min_dist < 3:  # Seuil de proximité en pixels
             return distances.index(min_dist)
         return None
