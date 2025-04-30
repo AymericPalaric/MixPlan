@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QSplitter
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QSplitter, QMenu, QAction
 from PyQt5.QtCore import Qt
 import numpy as np
 from src.algo.points_lists import TypeIIIPlan
@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
 
         # Création des composants
         self.parameters_panel = ParametersPanel(parent=self)
-        self.ternary_graph = TernaryGraph()
+        self.ternary_graph = TernaryGraph(parent=self)
         self.scores_panel = ScoresPanel()
 
         # Connexions
@@ -23,6 +23,9 @@ class MainWindow(QMainWindow):
         self.scores_panel.interpolate_button.clicked.connect(self.interpolate_graph)
         self.ternary_graph.enable_click_callback(self.update_score_inputs_from_graph_click)
         self.parameters_panel.launch_plan_button.clicked.connect(self.launch_plan)
+
+        self.scores_panel.points_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.scores_panel.points_table.customContextMenuRequested.connect(self.open_context_menu)
         # Mise en page avec QSplitter
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self.parameters_panel)
@@ -109,18 +112,22 @@ class MainWindow(QMainWindow):
         real_min_values = min_values # [min_values[i] + max_values[(i+1)%3] + max_values[(i+2)%3] for i in range(3)]
         try:
             order = int(order) if selected_plan != "Type III" else order
+            POINTS = POINTS_LISTS[selected_plan][3, order]
         except ValueError:
             if POINTS_LISTS[selected_plan].order:
                 gui_logger.log("Ordre de configuration invalide", level="warning")
                 return
+        except AssertionError as e:
+            gui_logger.log("Erreur lors de la génération du plan d'expérience :", e, level="error")
+            return
 
         # update points coordinates with min and max values
         points = [
             [
                 (real_min_values[i] + (real_max_values[i] - real_min_values[i]) * p[i])/100 for i in range(3)
             ]
-            for p in POINTS_LISTS[selected_plan][3, order]
-        ] if selected_plan != "Type III" else POINTS_LISTS[selected_plan][3, order]
+            for p in POINTS
+        ] if selected_plan != "Type III" else POINTS
         points_data = [
             (points[i][0], points[i][1], points[i][2], 0) for i in range(len(points))
         ]
@@ -151,3 +158,20 @@ class MainWindow(QMainWindow):
             self.parameters_panel.plan_order.setEnabled(True)
             self.parameters_panel.initial_points_selector.clear()
             self.parameters_panel.initial_points_selector.addItems(POINTS_LISTS.keys())
+    
+    def open_context_menu(self, position):
+        index = self.scores_panel.points_table.indexAt(position)
+        if not index.isValid():
+            return
+
+        menu = QMenu()
+        delete_action = QAction("Supprimer ce point", self)
+        delete_action.triggered.connect(lambda: self.on_point_deleted(index.row()))
+        menu.addAction(delete_action)
+        menu.exec_(self.scores_panel.points_table.viewport().mapToGlobal(position))
+
+
+    def on_point_deleted(self, index):
+        gui_logger.log(f"Point supprimé (ligne {index})")
+        self.ternary_graph.delete_point(index)
+        self.scores_panel.delete_point(index)

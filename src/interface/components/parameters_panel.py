@@ -17,8 +17,9 @@ class ParametersPanel(QWidget):
         self.layout = QVBoxLayout()
         self.layout.setAlignment(Qt.AlignTop)
         self.setLayout(self.layout)
-
-        self.layout.addWidget(QLabel("Paramètres des composants"))
+        label = QLabel("Paramètres des composants")
+        label.setStyleSheet("font-weight: bold; font-size: 16px;")
+        self.layout.addWidget(label)
 
         self.component_inputs = {}
         self.component_names = {}
@@ -26,7 +27,7 @@ class ParametersPanel(QWidget):
 
         for i in range(1, 4):
             group_box = QGroupBox(f"Composant {i}")
-            group_box.setStyleSheet("QGroupBox { font-weight: bold; font-style: italic; }")
+            group_box.setStyleSheet("QGroupBox { font-style: italic; }")
             group_layout = QVBoxLayout()
             group_box.setLayout(group_layout)
 

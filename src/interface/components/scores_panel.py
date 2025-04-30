@@ -2,12 +2,14 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QListWidget, QPushButton,
     QLineEdit, QComboBox, QTableWidget, QTableWidgetItem,
     QHeaderView, QAbstractItemView, QMessageBox, QHBoxLayout,
-    QGroupBox, 
+    QGroupBox, QFileDialog, QMenu, QAction
 )
 from PyQt5.QtCore import Qt
 from functools import partial
 from src.algo.interpolator import *
 from src.interface.utils.logger import gui_logger
+import csv
+from datetime import datetime
 
 # Dictionnaire des interpolateurs disponibles
 INTERPOLATORS = {
@@ -34,9 +36,25 @@ class ScoresPanel(QWidget):
         self.points_table.setEditTriggers(QTableWidget.AllEditTriggers)
         self.layout.addWidget(self.points_table)
 
+
+        # Boutons pour importer et exporter les points
+        self.import_export_layout = QHBoxLayout()
+        self.layout.addLayout(self.import_export_layout)
+        self.import_button = QPushButton("Importer")
+        self.import_button.setStyleSheet("QPushButton { font-weight: bold; }")
+        self.import_button.setToolTip("Importer un fichier de points.")
+        self.import_export_layout.addWidget(self.import_button)
+        self.export_button = QPushButton("Exporter")
+        self.export_button.setStyleSheet("QPushButton { font-weight: bold; }")
+        self.export_button.setToolTip("Exporter les points vers un fichier.")
+        self.import_export_layout.addWidget(self.export_button)
+        self.import_button.clicked.connect(self.import_points)
+        self.export_button.clicked.connect(self.export_points)
+        self.export_button.setEnabled(False)
+
         # Bouton pour afficher un popup qui donne les masses (à partir des pourcentages dans le tableau)
         self.show_masses_button = QPushButton("Afficher les masses")
-        self.show_masses_button.setStyleSheet("QPushButton { font-weight: bold; font-style: italic; }")
+        self.show_masses_button.setStyleSheet("QPushButton { font-weight: bold; }")
         self.layout.addWidget(self.show_masses_button)
         self.show_masses_button.clicked.connect(self.show_masses_popup)
         self.show_masses_button.setEnabled(False)
@@ -105,6 +123,7 @@ class ScoresPanel(QWidget):
 
     def update_points_table(self, point_data):
         """Ajoute un point dans le tableau."""
+        self.export_button.setEnabled(True)
         row_position = self.points_table.rowCount()
         self.points_table.insertRow(row_position)
         for i, value in enumerate(point_data):
@@ -127,7 +146,7 @@ class ScoresPanel(QWidget):
     def clear(self):
         """Efface les champs d'entrée et la liste des scores."""
         self.clear_inputs()
-        self.clear_scores_list()
+        self.clear_scores_table()
 
     def update_interpolator(self):
         """Met à jour l'interpolateur sélectionné."""
@@ -167,6 +186,73 @@ class ScoresPanel(QWidget):
         self.mass_popup.raise_()
         self.mass_popup.activateWindow()
 
+    def export_points(self):
+        """Exporte les points vers un fichier csv."""
+        options = QFileDialog.Options()
+        default_path = f"essai_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Exporter les points", default_path, "CSV Files (*.csv);;All Files (*)", options=options
+        )
+        if not file_path:
+            return  # L'utilisateur a annulé
+
+        try:
+            with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                # Écrire les en-têtes
+                headers = [self.points_table.horizontalHeaderItem(i).text() for i in range(4)]
+                writer.writerow(headers)
+
+                # Écrire les données
+                for row in range(self.points_table.rowCount()):
+                    row_data = [
+                        self.points_table.item(row, col).text()
+                        if self.points_table.item(row, col) else ""
+                        for col in range(4)
+                    ]
+                    writer.writerow(row_data)
+
+            QMessageBox.information(self, "Succès", "Les points ont été exportés avec succès.")
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Une erreur s'est produite lors de l'exportation : {e}")
+            gui_logger.log(f"Erreur lors de l'exportation des points : {e}", level="error")
+    
+    def import_points(self):
+        """Importe les points depuis un fichier csv."""
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Importer les points", "", "CSV Files (*.csv);;All Files (*)", options=options
+        )
+        if not file_path:
+            return
+        
+        try:
+            with open(file_path, mode='r', newline='', encoding='utf-8') as file:
+                reader = csv.reader(file)
+                headers = next(reader)  # Lire les en-têtes
+                if len(headers) != 4:
+                    raise ValueError("Le fichier doit contenir exactement 4 colonnes.")
+
+                self.clear_scores_table()
+                for row in reader:
+                    if len(row) != 4:
+                        continue  # Ignorer les lignes incorrectes
+                    try:
+                        point_data = [float(value) for value in row]
+                        self.update_points_table(point_data)
+                    except ValueError:
+                        continue  # Ignorer les lignes avec des valeurs non numériques
+
+            QMessageBox.information(self, "Succès", "Les points ont été importés avec succès.")
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", f"Une erreur s'est produite lors de l'importation : {e}")
+            gui_logger.log(f"Erreur lors de l'importation des points : {e}", level="error")
+
+    def delete_point(self, row):
+        self.points_table.removeRow(row)
+        if self.points_table.rowCount() == 0:
+            self.export_button.setEnabled(False)
+            self.show_masses_button.setEnabled(False)
 
 class MassPopup(QWidget):
     def __init__(self, parent: ScoresPanel = None):

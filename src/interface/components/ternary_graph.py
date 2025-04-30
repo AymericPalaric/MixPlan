@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QMessageBox
 import ternary
 from ternary.helpers import project_point
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -163,10 +163,16 @@ class TernaryGraph(QWidget):
 
     def update_point(self, row, a, b, c, score):
         """Met à jour un point existant dans le graphe."""
-        if row < 0 or row >= len(self.points):
-            raise IndexError("Index de ligne invalide")
-        self.points[row] = (a, b, c)
-        self.scores[row] = score
+        if row < 0:
+            gui_logger.log(f"Index de ligne invalide : {row}", level="error")
+            return
+        if row >= len(self.points):
+            gui_logger.log(f"Detection d'un nouveau point : {row}")
+            self.points.append((a, b, c))
+            self.scores.append(score)
+        else:
+            self.points[row] = (a, b, c)
+            self.scores[row] = score
         self.update_graph()
     
     def enable_click_callback(self, callback):
@@ -338,8 +344,31 @@ class TernaryGraph(QWidget):
 
     def on_mouse_press(self, event):
         if event.button == 3:  # clic droit
-            self._is_panning = True
-            self._pan_start = (event.xdata, event.ydata)
+            # Tentative de suppression de point si clic sur un point
+            index = self.find_closest_point_index(event.xdata, event.ydata)
+            if index is not None:
+                self.confirm_delete_point(index)
+            else:
+                # Sinon, activer le pan
+                self._is_panning = True
+                self._pan_start = (event.xdata, event.ydata)
+    
+    def delete_point(self, index):
+        self.points.pop(index)
+        self.scores.pop(index)
+        self.update_graph()
+
+    def confirm_delete_point(self, index):
+        result = QMessageBox.question(
+            self,
+            "Supprimer ce point",
+            f"Voulez-vous vraiment supprimer le point {index + 1} ?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if result == QMessageBox.Yes:
+            # Optionnel : notifie le parent
+            if hasattr(self.parent_, "on_point_deleted"):
+                self.parent_.on_point_deleted(index)
 
     def on_mouse_release(self, event):
         if event.button == 3:
@@ -361,3 +390,15 @@ class TernaryGraph(QWidget):
         self.canvas.draw_idle()
 
         self._pan_start = (event.xdata, event.ydata)
+    
+    def find_closest_point_index(self, x, y):
+        if not self.points:
+            return None
+
+        # Conversion des points ternaires en coordonnées cartésiennes pour comparaison
+        cart_points = self.ternary_to_cartesian([(a * 100, b * 100, c * 100) for a, b, c in self.points])
+        distances = [np.hypot(x - xp, y - yp) for xp, yp in cart_points]
+        min_dist = min(distances)
+        if min_dist < 5:  # Seuil de proximité en pixels
+            return distances.index(min_dist)
+        return None
