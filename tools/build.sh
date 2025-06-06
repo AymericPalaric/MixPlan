@@ -39,4 +39,9 @@ echo "Build complete. The executable is located at $OUTPUT_DIR/$OUTPUT_EXE.exe"
 # Deactivate the virtual environment
 deactivate
 echo "Virtual environment deactivated."
+
+# Zip the .exe file, with password protection
+echo "Zipping the executable..."
+"C:\Program Files\7-Zip\7z.exe" a -tzip "$OUTPUT_DIR/$OUTPUT_EXE.zip" "$OUTPUT_DIR/$OUTPUT_EXE.exe" -pMixPlanPapou
+
 echo "Done."

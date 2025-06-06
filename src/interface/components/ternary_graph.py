@@ -127,6 +127,12 @@ class TernaryGraph(QWidget):
         if self.points:
             scaled_points = [(p[0] * 100, p[1] * 100, p[2] * 100) for p in self.points]
             self.tax.scatter(scaled_points, marker='o', color='red', label="Points")
+            # Ajouter les numéros à côté de chaque point
+            for idx, pt in enumerate(scaled_points):
+                # Décaler légèrement le texte pour qu'il ne soit pas sur le point
+                offset = (2, 2, -4)  # Décalage arbitraire, à ajuster si besoin
+                label_pos = tuple(pt[i] + offset[i] for i in range(3))
+                self.tax.annotate(str(idx + 1), pt, fontsize=12, ha='left', va='bottom', color='black')
         self.canvas.draw()
 
     def interpolate(self, interpolator_cls):
