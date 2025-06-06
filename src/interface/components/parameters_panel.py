@@ -89,8 +89,14 @@ class ParametersPanel(QWidget):
         # On selector switch, change enabled state of order input
         self.initial_points_selector.currentTextChanged.connect(self.enable_plan_order)
 
-        self.launch_plan_button = QPushButton("Initialiser le plan")
-        experience_layout.addWidget(self.launch_plan_button)
+        buttons_layout = QHBoxLayout()
+        self.launch_plan_button = QPushButton("Initialiser le plan d'expérience")
+        self.reset_plan_button = QPushButton("Réinitialiser plan d'expérience")
+        buttons_layout.addWidget(self.launch_plan_button)
+        buttons_layout.addWidget(self.reset_plan_button)
+        experience_layout.addLayout(buttons_layout)
+        if parent:
+            self.reset_plan_button.clicked.connect(parent.reset_experiment_plan)
         self.layout.addWidget(experience_gbox)
 
         # Ajout d’un champ console pour les logs

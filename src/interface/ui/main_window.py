@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
         real_max_values = [min(max_values[i], 100 - min_values[(i+1)%3] - min_values[(i+2)%3]) for i in range(3)]
         real_min_values = min_values # [min_values[i] + max_values[(i+1)%3] + max_values[(i+2)%3] for i in range(3)]
         try:
-            order = int(order) if selected_plan != "Type III" else order
+            order = int(order) if order else 0
             POINTS = POINTS_LISTS[selected_plan][3, order]
         except ValueError:
             if POINTS_LISTS[selected_plan].order:
@@ -149,8 +149,11 @@ class MainWindow(QMainWindow):
             self.parameters_panel.initial_points_selector.clear()
             self.parameters_panel.initial_points_selector.addItems(["Type III",])
             self.parameters_panel.initial_points_selector.setCurrentText("Type III")
-            self.parameters_panel.plan_order.setEnabled(False)
-            self.parameters_panel.plan_order.clear()
+            self.parameters_panel.plan_order.setEnabled(True)
+            self.parameters_panel.initial_points_selector.setToolTip("Plan d'expérience Type III (D-optimalité)")
+            # Le champ d'ordre devient le nombre de points à garder grâce à l'algorithme de Fedorov
+            self.parameters_panel.plan_order.setPlaceholderText("Nombre de points à garder (algorithme de Fedorov)")
+            # Par défaut, on garde tous les points
         else:
             # Revenir à la liste de points par défaut : remover Type III
             if "Type III" in POINTS_LISTS:
@@ -175,3 +178,11 @@ class MainWindow(QMainWindow):
         gui_logger.log(f"Point supprimé (ligne {index})")
         self.ternary_graph.delete_point(index)
         self.scores_panel.delete_point(index)
+    
+    def reset_experiment_plan(self):
+        """Réinitialise le plan d'expérience (vide le tableau et le graphique)."""
+        self.ternary_graph.points = []
+        self.ternary_graph.scores = []
+        self.ternary_graph.update_graph()
+        self.scores_panel.clear_scores_table()
+        gui_logger.log("Plan d'expérience réinitialisé.", level="user_action")

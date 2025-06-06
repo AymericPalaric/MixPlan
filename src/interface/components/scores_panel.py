@@ -116,7 +116,7 @@ class ScoresPanel(QWidget):
             x = float(self.x_input.text())
             y = float(self.y_input.text())
             z = float(self.z_input.text())
-            score = float(self.score_input.text())
+            score = float(self.score_input.text()) if self.score_input.text() else 0.0
             return x, y, z, score
         except ValueError:
             return None

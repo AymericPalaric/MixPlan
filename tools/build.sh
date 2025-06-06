@@ -25,7 +25,7 @@ fi
 
 # Build the .exe using PyInstaller, no verbose output
 echo "Building $MAIN_PY into $OUTPUT_EXE..."
-pyinstaller --onefile --name "$OUTPUT_EXE" "$MAIN_PY" --log-level=ERROR --windowed
+pyinstaller --onefile --name "$OUTPUT_EXE" "$MAIN_PY" --log-level=ERROR --windowed --hidden-import=sklearn.externals.array_api_compat.numpy.fft
 
 # Move the built .exe to the output directory
 mkdir -p "$OUTPUT_DIR"

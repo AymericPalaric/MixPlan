@@ -198,6 +198,11 @@ class TypeIIIPlan:
         """
         import random
 
+        if n_points > len(candidates):
+            # Si n_points est supérieur au nombre de candidats, retourner tous les candidats
+            indices = list(range(len(candidates)))
+            return indices
+
         # Initialisation aléatoire du design
         indices = list(range(len(candidates)))
         candidates = np.array(candidates)
@@ -235,8 +240,10 @@ class TypeIIIPlan:
         return current_indices
 
     def __getitem__(self, config):
+        n_points = config[1] if len(config) > 1 else 15
+        n_points = len(self.points) if n_points == 0 else n_points
         # Return the generated points for the given hull
-        return [self.points[i] for i in self.fedorov_exchange(self.points, 5)]
+        return [self.points[i] for i in self.fedorov_exchange(self.points, n_points=n_points)]
 
 
 if __name__ == "__main__":
