@@ -125,7 +125,7 @@ class TernaryGraph(QWidget):
 
         # Ajouter les points au graphe
         if self.points:
-            scaled_points = [(p[0] * 100, p[1] * 100, p[2] * 100) for p in self.points]
+            scaled_points = [(p[0], p[1], p[2]) for p in self.points]
             self.tax.scatter(scaled_points, marker='o', color='red', label="Points")
             # Ajouter les numéros à côté de chaque point
             for idx, pt in enumerate(scaled_points):

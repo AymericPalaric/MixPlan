@@ -130,7 +130,7 @@ class ScoresPanel(QWidget):
             item = QTableWidgetItem(str(value))
             item.setFlags(item.flags() | Qt.ItemIsEditable)
             # round to 3 decimal places
-            item.setData(Qt.EditRole, round(value, 3))
+            item.setData(Qt.EditRole, round(value, 2))
             self.points_table.setItem(row_position, i, item)
 
     def clear_inputs(self):
@@ -308,7 +308,7 @@ class MassPopup(QWidget):
                 except (ValueError, AttributeError):
                     percentage = 0.0
 
-                mass = percentage * float(self.parent_scores_panel.total_mass)
+                mass = percentage/100 * float(self.parent_scores_panel.total_mass)
                 item = QTableWidgetItem(str(round(mass, 3)))
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)  # Lecture seule mais copiable
                 self.masses_list.setItem(row_position, j, item)

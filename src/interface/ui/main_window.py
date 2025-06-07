@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
         point_data = self.scores_panel.get_point_data()
         if point_data:
             x, y, z, score = point_data
-            self.ternary_graph.add_point(x, y, z, score)
+            self.ternary_graph.add_point(x/100, y/100, z/100, score)
             self.scores_panel.update_points_table((x, y, z, score))
             self.scores_panel.x_input.clear()
             self.scores_panel.y_input.clear()
@@ -95,11 +95,10 @@ class MainWindow(QMainWindow):
     
     def update_score_inputs_from_graph_click(self, a, b, c):
         """Met à jour les champs du ScoresPanel avec les coordonnées ternaires du clic."""
-        self.scores_panel.x_input.setText(f"{a:.3f}")
-        self.scores_panel.y_input.setText(f"{b:.3f}")
-        self.scores_panel.z_input.setText(f"{c:.3f}")
+        self.scores_panel.x_input.setText(f"{a*100:.1f}")
+        self.scores_panel.y_input.setText(f"{b*100:.1f}")
+        self.scores_panel.z_input.setText(f"{c*100:.1f}")
         self.scores_panel.score_input.setFocus()
-    
 
     def launch_plan(self):
         """Lance le plan d'expérience sélectionné."""
@@ -137,6 +136,7 @@ class MainWindow(QMainWindow):
         self.ternary_graph.set_initial_points(points)
         self.scores_panel.clear_scores_table()
         for point in points_data:
+            point = (point[0] * 100, point[1] * 100, point[2] * 100, point[3])
             self.scores_panel.update_points_table(point)
         gui_logger.log(f"Lancement du plan d'expérience : {selected_plan} avec ordre {order}")
         gui_logger.log("N'oubliez pas de modifier les scores dans le tableau !", level="user_action")

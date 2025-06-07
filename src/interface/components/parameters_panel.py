@@ -154,24 +154,7 @@ class ParametersPanel(QWidget):
             parameters["total_mass"] = total_mass
         return parameters
 
-    def launch_initial_plan(self):
-        """Lance la configuration de plan d'expérience."""
-        selected_plan = self.initial_points_selector.currentText()
-        order = self.plan_order.text()
-        if selected_plan and order:
-            try:
-                order = int(order)
-                if order < 1:
-                    raise ValueError("L'ordre doit être supérieur à 0")
-            except ValueError:
-                gui_logger.log("L'ordre doit être un entier positif.", level="error")
-                return
 
-            # Récupérer la classe de points correspondante
-            points_class = POINTS_LISTS[selected_plan]
-            points = points_class[3,order].get_points()
-            gui_logger.log(f"Points initiaux pour {selected_plan} (ordre {order}) : {points}")
-    
     def log(self, message, level="INFO"):
         level = level.upper()
         color = {
