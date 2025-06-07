@@ -131,28 +131,24 @@ class TernaryGraph(QWidget):
             for idx, pt in enumerate(scaled_points):
                 # Décaler légèrement le texte pour qu'il ne soit pas sur le point
                 offset = (2, 2, -4)  # Décalage arbitraire, à ajuster si besoin
-                label_pos = tuple(pt[i] + offset[i] for i in range(3))
                 self.tax.annotate(str(idx + 1), pt, fontsize=12, ha='left', va='bottom', color='black')
         self.canvas.draw()
 
     def interpolate(self, interpolator_cls):
-        """Effectue une interpolation sur les points existants."""
+        """Effectue une interpolation sur les points existants, uniquement dans la zone de contrainte."""
         points = np.array(self.points)
         scores = np.array(self.scores)
         if len(self.points) < interpolator_cls.min_num_points:
             gui_logger.log("Pas assez de points pour interpoler", level="warning")
             return None
 
-        # Créer l'interpolateur
         interpolator = interpolator_cls(points, scores)
         self.R2_score = interpolator.R2_score()
 
-        # Définir la fonction de heatmap
+        constr_function = self.constraint_mask_function()
         def heatmap_function(p):
-            score = interpolator(np.array(p))
+            score = interpolator(np.array(p)) if constr_function(p)==0 else np.nan
             return float(score) if not np.isnan(score) else 0
-
-        # Appliquer la heatmap au graphe
         self.update_graph(hm=heatmap_function)
         self.canvas.draw()
 
@@ -162,7 +158,6 @@ class TernaryGraph(QWidget):
         :param parameters: Dictionnaire contenant les valeurs min et max pour chaque composant.
         """
         self.parameters = parameters
-        self.constraint_mask = self.generate_constraint_mask()
         self.update_graph()
         return self.polygon
     
@@ -217,27 +212,6 @@ class TernaryGraph(QWidget):
         from ternary.helpers import project_point
         return [project_point(p) for p in points]
 
-    def generate_constraint_mask(self, resolution=2):
-        """
-        Génère un masque des zones hors contraintes en heatmap (valeurs 0 ou 1).
-        """
-        if self.parameters is None:
-            return None
-
-        func = self.constraint_mask_function()
-        scale = 100
-        d = resolution
-
-        # Générer les triplets possibles
-        data = {}
-        for i in range(scale + 1):
-            for j in range(scale + 1 - i):
-                k = scale - i - j
-                a, b, c = i / scale, j / scale, k / scale
-                data[(i, j, k)] = func((a, b, c))
-
-        return data
-
     def constraint_mask_function(self):
         """
         Crée une fonction qui retourne 1 pour les zones en dehors des contraintes, 0 sinon.
@@ -257,7 +231,6 @@ class TernaryGraph(QWidget):
             return 0
 
         return is_outside
-
 
     def draw_constraints_overlay(self):
         """
@@ -285,8 +258,8 @@ class TernaryGraph(QWidget):
         min1 = int(min1) or 0
         min2 = int(min2) or 0
         min3 = int(min3) or 0
-        for a in range(min1, max1 + 1, 2):
-            for b in range(min2, max2 + 1, 2):
+        for a in range(min1, max1 + 1):
+            for b in range(min2, max2 + 1):
                 c = 100 - a - b
                 if min3 <= c <= max3 and a >= 0 and b >= 0 and c >= 0:
                     valid.append((a, b, c))
@@ -309,7 +282,6 @@ class TernaryGraph(QWidget):
         # Dessiner le masque
         self.ax.fill(*zip(*outer_cart), color='lightgrey', alpha=0.4, zorder=0)
         self.ax.fill(*zip(*valid_cart), color='white', alpha=1.0, zorder=1)
-    
 
     def on_scroll(self, event):
         base_scale = 1.2
